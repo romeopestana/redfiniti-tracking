@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weather Dashboard</title>
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              ui: [
+                "ui-sans-serif",
+                "system-ui",
+                "-apple-system",
+                "Segoe UI",
+                "Roboto",
+                "Helvetica",
+                "Arial",
+                "Apple Color Emoji",
+                "Segoe UI Emoji",
+              ],
+            },
+          },
+        },
+      };
+    </script>
+
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body class="min-h-screen text-white font-ui">
+    <div class="bg-ambient"></div>
+
+    <header class="container mx-auto px-4 pt-8">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-baseline justify-between gap-4">
+          <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">
+            Weather Dashboard
+          </h1>
+          <div class="text-xs text-white/60 hidden md:block">
+            Powered by OpenWeatherMap
+          </div>
+        </div>
+
+        <form id="searchForm" class="w-full md:max-w-xl">
+          <div class="glass flex items-center gap-2 rounded-2xl px-3 py-2">
+            <svg
+              class="h-5 w-5 text-white/70"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M21 21l-4.3-4.3m1.3-5.2a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+            <input
+              id="searchInput"
+              class="w-full bg-transparent outline-none placeholder:text-white/50 text-white"
+              type="text"
+              placeholder="Search city (e.g., London, Tokyo, Nairobi)"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Search city"
+            />
+            <button
+              class="rounded-xl bg-white/10 hover:bg-white/15 active:bg-white/20 transition px-3 py-2 text-sm font-semibold"
+              type="submit"
+            >
+              Search
+            </button>
+          </div>
+          <div id="hint" class="mt-2 text-xs text-white/60">
+            Tip: try “New York”, “Paris”, or “Sydney”.
+          </div>
+        </form>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+      <section class="grid gap-6">
+        <div id="status" class="hidden"></div>
+
+        <article id="currentCard" class="glass rounded-3xl p-5 md:p-7">
+          <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div class="min-w-0">
+              <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-2xl bg-white/10 grid place-items-center">
+                  <span id="currentIconEmoji" class="text-xl" aria-hidden="true">⛅</span>
+                </div>
+                <div class="min-w-0">
+                  <div
+                    id="locationName"
+                    class="truncate text-lg md:text-xl font-semibold"
+                  >
+                    —
+                  </div>
+                  <div id="currentMeta" class="text-sm text-white/70">
+                    —
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-5 flex items-end gap-3">
+                <div id="tempBig" class="text-6xl md:text-7xl font-semibold tracking-tight">
+                  —
+                </div>
+                <div class="pb-2 text-sm text-white/70">
+                  <div id="descText" class="capitalize">—</div>
+                  <div id="feelsLike">—</div>
+                </div>
+              </div>
+
+              <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="glass-sub rounded-2xl p-3">
+                  <div class="text-xs text-white/60">Humidity</div>
+                  <div id="humidity" class="mt-1 text-lg font-semibold">—</div>
+                </div>
+                <div class="glass-sub rounded-2xl p-3">
+                  <div class="text-xs text-white/60">Wind</div>
+                  <div id="wind" class="mt-1 text-lg font-semibold">—</div>
+                </div>
+                <div class="glass-sub rounded-2xl p-3">
+                  <div class="text-xs text-white/60">Pressure</div>
+                  <div id="pressure" class="mt-1 text-lg font-semibold">—</div>
+                </div>
+                <div class="glass-sub rounded-2xl p-3">
+                  <div class="text-xs text-white/60">Visibility</div>
+                  <div id="visibility" class="mt-1 text-lg font-semibold">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between md:flex-col md:items-end md:justify-center gap-4">
+              <img
+                id="currentIcon"
+                class="h-24 w-24 md:h-28 md:w-28 drop-shadow-[0_12px_24px_rgba(0,0,0,0.35)]"
+                alt="Weather icon"
+                src=""
+              />
+              <div class="text-right text-xs text-white/60">
+                <div id="updatedAt">Updated —</div>
+                <div id="unitsNote">Units: °C, m/s</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <section class="glass rounded-3xl p-5 md:p-7">
+          <div class="flex items-center justify-between gap-4">
+            <h2 class="text-lg md:text-xl font-semibold">5‑day forecast</h2>
+            <div id="forecastSubtitle" class="text-xs text-white/60">
+              Daily snapshot (around midday)
+            </div>
+          </div>
+
+          <div
+            id="forecastGrid"
+            class="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
+          >
+            <!-- forecast cards injected by app.js -->
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="container mx-auto px-4 pb-8">
+      <div class="text-xs text-white/50">
+        Note: To keep your API key private, use a tiny proxy (instructions below).
+      </div>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
+

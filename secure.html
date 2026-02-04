@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Secure View</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Columns: no wrap, clearly visible headers, aligned with sheet */
+    #secureTable { table-layout: auto; }
+    #secureTable th,
+    #secureTable td {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 20rem;
+    }
+    #secureTable thead th {
+      background: rgba(30, 41, 59, 0.95);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.8125rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    }
+    #secureTable tbody td {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.8125rem;
+    }
+    #secureTable tbody tr:hover td {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-white">
+  <div class="flex flex-col min-h-screen">
+    <header class="px-6 py-4 border-b border-white/10 bg-slate-900/80 backdrop-blur flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        <h1 id="secureTitle" class="text-xl md:text-2xl font-semibold tracking-wide">
+          Secure View
+        </h1>
+        <p class="mt-1 text-xs md:text-sm text-white/60">
+          View-only data from the selected tab.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          id="logoutBtn"
+          class="rounded-xl bg-red-500/90 hover:bg-red-400 active:bg-red-500 text-xs md:text-sm font-semibold tracking-wide px-4 py-2 shadow-lg shadow-red-500/30 transition"
+        >
+          Logout to main page
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 px-4 py-4 md:px-6 md:py-6">
+      <div
+        class="w-full rounded-2xl bg-white/5 border border-white/10 backdrop-blur-2xl shadow-[0_16px_40px_rgba(0,0,0,0.6)] p-4 md:p-6"
+      >
+        <div id="secureStatus" class="text-sm text-white/60 mb-3">
+          Loading secure data...
+        </div>
+        <div class="overflow-auto max-h-[75vh]">
+          <div class="min-w-max inline-block">
+            <table
+              id="secureTable"
+              class="hidden border-collapse"
+            >
+              <thead id="secureThead"></thead>
+              <tbody id="secureTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name) || "";
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function loadSecureTab() {
+      const sheet = getQueryParam("sheet").trim();
+      const titleEl = document.getElementById("secureTitle");
+      const statusEl = document.getElementById("secureStatus");
+      const thead = document.getElementById("secureThead");
+      const tbody = document.getElementById("secureTbody");
+      const table = document.getElementById("secureTable");
+
+      if (!sheet) {
+        statusEl.textContent = "Missing sheet/tab name in URL.";
+        return;
+      }
+
+      // Update page title and header to match tab name
+      document.title = sheet;
+      titleEl.textContent = sheet;
+
+      try {
+        const params = new URLSearchParams();
+        params.set("sheet", sheet);
+
+        const response = await fetch(
+          "/api/tab?" + params.toString()
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          statusEl.textContent = data.error || "Failed to load secure data.";
+          return;
+        }
+
+        const header = data.header || [];
+        const rows = data.rows || [];
+
+        // Build header from Row 2 – no wrap, clearly visible
+        let headerHtml = "<tr>";
+        header.forEach((h) => {
+          const text = (h !== undefined && h !== null) ? String(h) : "";
+          headerHtml += `<th scope="col">${escapeHtml(text)}</th>`;
+        });
+        headerHtml += "</tr>";
+        thead.innerHTML = headerHtml;
+
+        // Build body – one column per header, no wrap
+        let bodyHtml = "";
+        rows.forEach((row) => {
+          bodyHtml += "<tr>";
+          header.forEach((_, idx) => {
+            const cell = row[idx] !== undefined && row[idx] !== null ? String(row[idx]) : "";
+            bodyHtml += `<td>${escapeHtml(cell)}</td>`;
+          });
+          bodyHtml += "</tr>";
+        });
+        tbody.innerHTML = bodyHtml;
+
+        table.classList.remove("hidden");
+        statusEl.textContent = "";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Error contacting secure backend.";
+      }
+    }
+
+    // Simple logout: go back to main tracking page
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        // Navigate back to the main index page
+        window.location.href = "indexshipping.html";
+      });
+    }
+
+    loadSecureTab();
+  </script>
+</body>
+</html>
+
