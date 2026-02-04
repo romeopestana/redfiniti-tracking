@@ -1,0 +1,7 @@
+# Render: use this so the service always runs server.js
+services:
+  - type: web
+    name: redfiniti-tracking
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
