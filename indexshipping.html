@@ -59,7 +59,7 @@
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-4 py-8">
+  <main class="max-w-6xl mx-auto px-4 py-8">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- Secure Customer Access (left / first) -->
       <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
@@ -109,14 +109,14 @@
           Today's Live Tracking
         </h2>
 
-        <form id="trackingForm" class="grid gap-4 sm:grid-cols-[1fr,1fr,auto] items-end">
+        <form id="trackingForm" class="grid gap-4 sm:grid-cols-[1.2fr,1.3fr,auto] items-end">
           <div class="space-y-1.5">
             <label for="shippingLine" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
               Shipping Line
             </label>
             <select
               id="shippingLine"
-              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]/30"
+              class="w-full min-w-[180px] sm:min-w-[220px] rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]/30"
             >
               <option value="" disabled selected>Select a shipping line</option>
               <option value="MACS">MACS</option>
@@ -126,7 +126,7 @@
           </div>
 
           <div class="space-y-1.5">
-            <label for="containerNumber" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+            <label for="containerNumber" class="block text-xs font-medium uppercase tracking-wide text-slate-500 whitespace-nowrap">
               Container Number
             </label>
             <input
@@ -141,7 +141,7 @@
             <span class="block text-xs font-medium uppercase tracking-wide text-transparent select-none">&nbsp;</span>
             <button
               type="submit"
-              class="w-full sm:w-auto rounded-lg bg-[#1e3a5f] hover:bg-[#2d4a73] text-white text-sm font-semibold px-6 py-2.5 shadow-sm transition"
+              class="w-full sm:w-auto rounded-lg bg-[#1e3a5f] hover:bg-[#2d4a73] text-white text-sm font-semibold px-6 py-2.5 whitespace-nowrap shadow-sm transition"
             >
               Go Fetch
             </button>
