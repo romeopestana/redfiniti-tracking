@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>REDfiniti Container Tracking</title>
+  <title>Shesha Logistics Shipment Tracking</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    /* Optional: smooth fade for result card */
     .fade-in {
       animation: fadeIn 0.4s ease-out;
     }
@@ -17,63 +16,98 @@
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    /* Shesha-style: navy accent */
+    .btn-primary {
+      background: #1e3a5f;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #2d4a73;
+    }
   </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-white">
-  <!-- Background (blurred gradient / subtle pattern) -->
-  <div
-    class="fixed inset-0 -z-10 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900"
-  >
-    <div
-      class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(239,68,68,0.35),_transparent_60%),_radial-gradient(circle_at_bottom,_rgba(59,130,246,0.35),_transparent_60%)] blur-3xl opacity-60"
-    ></div>
-  </div>
-
-  <div class="min-h-screen flex flex-col items-center justify-center px-4 py-10 space-y-8">
-    <!-- Main Header: Logo + Title on page -->
-    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 w-full max-w-3xl">
-      <!-- Logo (from redfiniti logo test.jpg) -->
-      <div
-        class="flex items-center justify-center h-24 w-48 md:h-28 md:w-60 rounded-2xl border border-white/20 bg-white/5 overflow-hidden"
-      >
-        <img
-          src="redfiniti logo test.jpg"
-          alt="REDfiniti Logo"
-          class="h-full w-full object-contain"
-        />
+<body class="min-h-screen bg-slate-50 text-slate-800">
+  <!-- Top bar: Shesha-style header -->
+  <header class="bg-[#1e3a5f] text-white shadow-md">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="flex items-center justify-center overflow-hidden">
+          <img
+            src="shesha logo.avif"
+            alt="Shesha Logo"
+            class="max-h-14 w-auto sm:max-h-16 object-contain"
+          />
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-semibold tracking-tight">
+            Shesha Logistics Shipment Tracking
+          </h1>
+          <p class="text-xs sm:text-sm text-white/80 mt-0.5">
+            Real-time visibility for your shipments.
+          </p>
+        </div>
       </div>
+    </div>
+  </header>
 
-      <!-- Title / Subtitle -->
-      <div class="text-right md:text-right flex-1">
-        <h1 class="text-2xl md:text-3xl font-semibold tracking-wide">
-          RED<span class="text-red-400">finiti</span> Container Tracking
-        </h1>
-        <p class="mt-1 text-sm text-white/60">
-          Real-time visibility for your ocean shipments.
+  <main class="max-w-5xl mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Secure Customer Access (left / first) -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <h2 class="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-2">
+          Secure Customer Access
+        </h2>
+        <p class="text-sm text-slate-600 mb-6">
+          Enter your username (tab name) and password to unlock more detailed shipment information.
         </p>
-      </div>
-    </header>
 
-    <!-- Glassmorphism Card: Today's Tracking -->
-    <div
-      class="w-full max-w-3xl rounded-3xl bg-white/10 border border-white/15 backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.55)] p-8 md:p-10 space-y-8"
-    >
-      <!-- Today's Live Tracking Section -->
-      <section class="space-y-6">
-        <h2 class="text-lg font-semibold tracking-wide text-white">
+        <form class="space-y-4">
+          <div class="space-y-1.5">
+            <label for="username" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              placeholder="your.username"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]/30"
+            />
+          </div>
+          <div class="space-y-1.5">
+            <label for="password" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]/30"
+            />
+          </div>
+          <button
+            id="secureLoginBtn"
+            type="button"
+            class="rounded-lg bg-[#1e3a5f] hover:bg-[#2d4a73] text-white text-sm font-semibold px-6 py-2.5 shadow-sm transition"
+          >
+            Login for more details
+          </button>
+        </form>
+      </section>
+
+      <!-- Today's Live Tracking (right / second) -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        <h2 class="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-6">
           Today's Live Tracking
         </h2>
 
-        <!-- Form -->
-        <form id="trackingForm" class="grid gap-4 md:grid-cols-[1.2fr,1.5fr,0.8fr] items-end">
-          <!-- Shipping Line Dropdown -->
-          <div class="space-y-2">
-            <label for="shippingLine" class="text-xs font-medium uppercase tracking-wide text-white/60">
+        <form id="trackingForm" class="grid gap-4 sm:grid-cols-[1fr,1fr,auto] items-end">
+          <div class="space-y-1.5">
+            <label for="shippingLine" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
               Shipping Line
             </label>
             <select
               id="shippingLine"
-              class="w-full rounded-xl bg-white border border-white/20 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400/80 text-gray-800"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]/30"
             >
               <option value="" disabled selected>Select a shipping line</option>
               <option value="MACS">MACS</option>
@@ -82,182 +116,93 @@
             </select>
           </div>
 
-          <!-- Container Number Input -->
-          <div class="space-y-2">
-            <label for="containerNumber" class="text-xs font-medium uppercase tracking-wide text-white/60">
+          <div class="space-y-1.5">
+            <label for="containerNumber" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
               Container Number
             </label>
             <input
               id="containerNumber"
               type="text"
               placeholder="e.g. FCIU5935233"
-              class="w-full rounded-xl bg-white/5 border border-white/20 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400/80 text-white/90 placeholder:text-white/30"
+              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#1e3a5f] focus:ring-1 focus:ring-[#1e3a5f]/30"
             />
           </div>
 
-          <!-- Go Fetch Button -->
-          <div class="space-y-2">
-            <span class="block text-xs font-medium uppercase tracking-wide text-transparent select-none">
-              &nbsp;
-            </span>
+          <div class="space-y-1.5">
+            <span class="block text-xs font-medium uppercase tracking-wide text-transparent select-none">&nbsp;</span>
             <button
               type="submit"
-              class="w-full rounded-xl bg-red-500/90 hover:bg-red-400 active:bg-red-500 text-sm font-semibold tracking-wide py-2.5 shadow-lg shadow-red-500/30 transition"
+              class="w-full sm:w-auto rounded-lg bg-[#1e3a5f] hover:bg-[#2d4a73] text-white text-sm font-semibold px-6 py-2.5 shadow-sm transition"
             >
               Go Fetch
             </button>
           </div>
         </form>
-      </section>
 
-      <!-- Divider -->
-      <div class="border-t border-white/10"></div>
-
-      <!-- Result Section -->
-      <section class="space-y-4">
-        <h3 class="text-sm font-semibold tracking-wide uppercase text-white/60">
-          Tracking Result
-        </h3>
-
-        <div
-          id="resultCard"
-          class="hidden fade-in rounded-2xl bg-black/30 border border-white/15 px-5 py-4 md:px-6 md:py-5 text-sm md:text-base"
-        >
-          <dl class="grid gap-3 md:grid-cols-2">
-            <div>
-              <dt class="text-xs uppercase tracking-wide text-white/50">
-                Container Number
-              </dt>
-              <dd class="mt-1 font-medium text-white">
-                <span id="field-containerNumber">FCIU5935233</span>
-              </dd>
-            </div>
-
-            <div>
-              <dt class="text-xs uppercase tracking-wide text-white/50">
-                Shipped From
-              </dt>
-              <dd class="mt-1 text-white">
-                <span id="field-shippedFrom">Koblenz am rhein, DE</span>
-              </dd>
-            </div>
-
-            <div>
-              <dt class="text-xs uppercase tracking-wide text-white/50">
-                Port of Load
-              </dt>
-              <dd class="mt-1 text-white">
-                <span id="field-portOfLoad">Rotterdam, NL</span>
-              </dd>
-            </div>
-
-            <div>
-              <dt class="text-xs uppercase tracking-wide text-white/50">
-                Port of Discharge
-              </dt>
-              <dd class="mt-1 text-white">
-                <span id="field-portOfDischarge">Durban, ZA</span>
-              </dd>
-            </div>
-
-            <div>
-              <dt class="text-xs uppercase tracking-wide text-white/50">
-                Shipped To
-              </dt>
-              <dd class="mt-1 text-white">
-                <span id="field-shippedTo">Durban, ZA</span>
-              </dd>
-            </div>
-
-            <div>
-              <dt class="text-xs uppercase tracking-wide text-white/50">
-                Transhipment
-              </dt>
-              <dd class="mt-1 text-white">
-                <span id="field-transhipment">Yes (via mainline hub)</span>
-              </dd>
-            </div>
-
-            <div class="md:col-span-2">
-              <dt class="text-xs uppercase tracking-wide text-white/50">
-                Price Calculation Date*
-              </dt>
-              <dd class="mt-1 text-white">
-                <span id="field-priceDate">31/12/2025</span>
-              </dd>
-            </div>
-          </dl>
-
-          <p class="mt-4 text-[11px] text-white/50">
-            * All information above is dummy data for demonstration purposes only.
-          </p>
+        <div class="mt-6 pt-6 border-t border-slate-200">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3">
+            Tracking Result
+          </h3>
+          <div
+            id="resultCard"
+            class="hidden fade-in rounded-lg bg-slate-50 border border-slate-200 p-4 sm:p-5 text-sm"
+          >
+            <dl class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-slate-500">Container Number</dt>
+                <dd class="mt-0.5 font-medium text-slate-800"><span id="field-containerNumber">FCIU5935233</span></dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-slate-500">Shipped From</dt>
+                <dd class="mt-0.5 text-slate-700"><span id="field-shippedFrom">Koblenz am rhein, DE</span></dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-slate-500">Port of Load</dt>
+                <dd class="mt-0.5 text-slate-700"><span id="field-portOfLoad">Rotterdam, NL</span></dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-slate-500">Port of Discharge</dt>
+                <dd class="mt-0.5 text-slate-700"><span id="field-portOfDischarge">Durban, ZA</span></dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-slate-500">Shipped To</dt>
+                <dd class="mt-0.5 text-slate-700"><span id="field-shippedTo">Durban, ZA</span></dd>
+              </div>
+              <div>
+                <dt class="text-xs uppercase tracking-wide text-slate-500">Transhipment</dt>
+                <dd class="mt-0.5 text-slate-700"><span id="field-transhipment">Yes (via mainline hub)</span></dd>
+              </div>
+              <div class="sm:col-span-2">
+                <dt class="text-xs uppercase tracking-wide text-slate-500">Price Calculation Date*</dt>
+                <dd class="mt-0.5 text-slate-700"><span id="field-priceDate">31/12/2025</span></dd>
+              </div>
+            </dl>
+            <p class="mt-3 text-xs text-slate-500">
+              * All information above is dummy data for demonstration purposes only.
+            </p>
+          </div>
         </div>
       </section>
     </div>
 
-    <!-- Secure Access Section -->
-    <div
-      class="w-full max-w-3xl rounded-3xl bg-white/5 border border-white/10 backdrop-blur-2xl shadow-[0_16px_40px_rgba(0,0,0,0.6)] p-8 md:p-10 space-y-6"
-    >
-      <section class="space-y-4">
-        <h2 class="text-lg font-semibold tracking-wide text-white">
-          Secure Customer Access
-        </h2>
-        <p class="text-sm text-white/60">
-          Enter your username (tab name) and password to unlock more detailed shipment information.
-        </p>
+    <!-- Footer: match Shesha site tone -->
+    <footer class="text-center text-sm text-slate-500 py-6">
+      © <span id="year"></span> Shesha Logistics. All Rights Reserved.
+    </footer>
+  </main>
 
-        <form class="space-y-4">
-          <div class="space-y-2">
-            <label for="username" class="text-xs font-medium uppercase tracking-wide text-white/60">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              placeholder="your.username"
-              class="w-full rounded-xl bg-white/5 border border-white/20 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400/80 text-white/90 placeholder:text-white/30"
-            />
-          </div>
-
-          <div class="space-y-2">
-            <label for="password" class="text-xs font-medium uppercase tracking-wide text-white/60">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              class="w-full rounded-xl bg-white/5 border border-white/20 px-3 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400/80 text-white/90 placeholder:text-white/30"
-            />
-          </div>
-
-          <button
-            id="secureLoginBtn"
-            type="button"
-            class="mt-2 w-full md:w-auto rounded-xl bg-slate-800/90 hover:bg-slate-700 active:bg-slate-800 text-sm font-semibold tracking-wide px-6 py-2.5 shadow-lg shadow-black/40 transition"
-          >
-            Login for more details
-          </button>
-        </form>
-      </section>
-    </div>
-  </div>
-
-  <!-- JS: simple static dummy result for Today's Live Tracking (no backend) -->
   <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+
     const form = document.getElementById("trackingForm");
     const resultCard = document.getElementById("resultCard");
 
-    // Public: Today's Live Tracking (dummy data only)
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-
       resultCard.classList.remove("hidden");
       resultCard.classList.add("fade-in");
     });
 
-    // Secure: call backend (Node + Google Sheets) from Secure Customer Access
     const secureLoginBtn = document.getElementById("secureLoginBtn");
     if (secureLoginBtn) {
       secureLoginBtn.addEventListener("click", async () => {
@@ -268,14 +213,10 @@
           alert("Please enter both username and password.");
           return;
         }
-
-        // Very simple auth: password must be exactly "1234"
         if (password !== "1234") {
           alert("Incorrect password.");
           return;
         }
-
-        // On success, open a fresh page which will render the tab
         const url = `secure.html?sheet=${encodeURIComponent(username)}`;
         window.open(url, "_blank");
       });

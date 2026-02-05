@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Columns: no wrap, clearly visible headers, aligned with sheet */
     #secureTable { table-layout: auto; }
     #secureTable th,
     #secureTable td {
@@ -16,69 +15,67 @@
       max-width: 20rem;
     }
     #secureTable thead th {
-      background: rgba(30, 41, 59, 0.95);
+      background: #1e3a5f;
       color: #fff;
       font-weight: 700;
       font-size: 0.8125rem;
       padding: 0.5rem 0.75rem;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid #1e3a5f;
       position: sticky;
       top: 0;
       z-index: 10;
-      box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.1);
     }
     #secureTable tbody td {
       padding: 0.5rem 0.75rem;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid #e2e8f0;
       font-size: 0.8125rem;
+      color: #334155;
+    }
+    #secureTable tbody tr:nth-child(even) td {
+      background: #f8fafc;
     }
     #secureTable tbody tr:hover td {
-      background: rgba(255, 255, 255, 0.05);
+      background: #f1f5f9;
     }
   </style>
 </head>
-<body class="min-h-screen bg-slate-950 text-white">
-  <div class="flex flex-col min-h-screen">
-    <header class="px-6 py-4 border-b border-white/10 bg-slate-900/80 backdrop-blur flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+<body class="min-h-screen bg-slate-50 text-slate-800">
+  <header class="bg-[#1e3a5f] text-white shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
-        <h1 id="secureTitle" class="text-xl md:text-2xl font-semibold tracking-wide">
+        <h1 id="secureTitle" class="text-xl sm:text-2xl font-semibold tracking-tight">
           Secure View
         </h1>
-        <p class="mt-1 text-xs md:text-sm text-white/60">
+        <p class="mt-1 text-xs sm:text-sm text-white/80">
           View-only data from the selected tab.
         </p>
       </div>
-      <div class="flex items-center gap-3">
+      <div>
         <button
           id="logoutBtn"
-          class="rounded-xl bg-red-500/90 hover:bg-red-400 active:bg-red-500 text-xs md:text-sm font-semibold tracking-wide px-4 py-2 shadow-lg shadow-red-500/30 transition"
+          class="rounded-lg bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-4 py-2 transition"
         >
           Logout to main page
         </button>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <main class="flex-1 px-4 py-4 md:px-6 md:py-6">
-      <div
-        class="w-full rounded-2xl bg-white/5 border border-white/10 backdrop-blur-2xl shadow-[0_16px_40px_rgba(0,0,0,0.6)] p-4 md:p-6"
-      >
-        <div id="secureStatus" class="text-sm text-white/60 mb-3">
-          Loading secure data...
-        </div>
-        <div class="overflow-auto max-h-[75vh]">
-          <div class="min-w-max inline-block">
-            <table
-              id="secureTable"
-              class="hidden border-collapse"
-            >
-              <thead id="secureThead"></thead>
-              <tbody id="secureTbody"></tbody>
-            </table>
-          </div>
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6">
+      <div id="secureStatus" class="text-sm text-slate-600 mb-3">
+        Loading secure data...
+      </div>
+      <div class="overflow-auto max-h-[75vh]">
+        <div class="min-w-max inline-block">
+          <table id="secureTable" class="hidden border-collapse">
+            <thead id="secureThead"></thead>
+            <tbody id="secureTbody"></tbody>
+          </table>
         </div>
       </div>
-    </main>
-  </div>
+    </div>
+  </main>
 
   <script>
     function getQueryParam(name) {
@@ -105,17 +102,13 @@
         return;
       }
 
-      // Update page title and header to match tab name
       document.title = sheet;
       titleEl.textContent = sheet;
 
       try {
         const params = new URLSearchParams();
         params.set("sheet", sheet);
-
-        const response = await fetch(
-          "/api/tab?" + params.toString()
-        );
+        const response = await fetch("/api/tab?" + params.toString());
         const data = await response.json();
 
         if (!response.ok) {
@@ -126,7 +119,6 @@
         const header = data.header || [];
         const rows = data.rows || [];
 
-        // Build header from Row 2 – no wrap, clearly visible
         let headerHtml = "<tr>";
         header.forEach((h) => {
           const text = (h !== undefined && h !== null) ? String(h) : "";
@@ -135,7 +127,6 @@
         headerHtml += "</tr>";
         thead.innerHTML = headerHtml;
 
-        // Build body – one column per header, no wrap
         let bodyHtml = "";
         rows.forEach((row) => {
           bodyHtml += "<tr>";
@@ -155,11 +146,9 @@
       }
     }
 
-    // Simple logout: go back to main tracking page
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", () => {
-        // Navigate back to the main index page
         window.location.href = "indexshipping.html";
       });
     }
@@ -168,4 +157,3 @@
   </script>
 </body>
 </html>
-

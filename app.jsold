@@ -1,0 +1,384 @@
+/**
+ * Weather Dashboard (client)
+ *
+ * IMPORTANT SECURITY NOTE:
+ * - You cannot keep an OpenWeatherMap API key secret in browser JS.
+ * - The "safe" approach is to call your own server/proxy endpoint which reads
+ *   the API key from `.env` (server-side), then returns sanitized data.
+ *
+ * This client supports BOTH:
+ * - Proxy mode (recommended): set API_BASE_URL to your proxy origin (e.g. http://localhost:8787)
+ * - Direct mode (not safe): set OPENWEATHER_API_KEY below (will be exposed)
+ */
+
+// ====== CONFIG ======
+// Recommended: use the same-origin proxy included in this project (`server.js`).
+// When you run the dev server, your frontend + proxy share the same origin,
+// so leaving this as "" works.
+const API_BASE_URL = ""; // Optional: "http://localhost:8787" if hosting frontend separately.
+
+// Direct mode (NOT SAFE). Browsers cannot securely load `.env`.
+// Keep this empty and use the proxy (server.js + .env).
+const OPENWEATHER_API_KEY = ""; // only for quick demos (public)
+
+const UNITS = "metric"; // "metric" (°C) or "imperial" (°F)
+const DEFAULT_CITY = "London";
+
+// ====== DOM ======
+const $ = (id) => document.getElementById(id);
+
+const els = {
+  form: $("searchForm"),
+  input: $("searchInput"),
+  status: $("status"),
+
+  currentIcon: $("currentIcon"),
+  currentIconEmoji: $("currentIconEmoji"),
+  locationName: $("locationName"),
+  currentMeta: $("currentMeta"),
+  tempBig: $("tempBig"),
+  descText: $("descText"),
+  feelsLike: $("feelsLike"),
+  humidity: $("humidity"),
+  wind: $("wind"),
+  pressure: $("pressure"),
+  visibility: $("visibility"),
+  updatedAt: $("updatedAt"),
+  unitsNote: $("unitsNote"),
+
+  forecastGrid: $("forecastGrid"),
+};
+
+// ====== HELPERS ======
+function setStatus(type, message) {
+  if (!message) {
+    els.status.className = "hidden";
+    els.status.textContent = "";
+    return;
+  }
+
+  const base =
+    "glass rounded-2xl px-4 py-3 text-sm border flex items-start gap-2";
+  const variants = {
+    info: "border-white/15 text-white/80",
+    error: "border-red-300/25 text-red-50",
+    warn: "border-amber-300/25 text-amber-50",
+    success: "border-emerald-300/25 text-emerald-50",
+  };
+
+  els.status.className = `${base} ${variants[type] ?? variants.info}`;
+  els.status.textContent = message;
+}
+
+function formatTemp(x) {
+  if (typeof x !== "number" || Number.isNaN(x)) return "—";
+  return `${Math.round(x)}°`;
+}
+
+function formatSpeed(ms) {
+  if (typeof ms !== "number" || Number.isNaN(ms)) return "—";
+  if (UNITS === "imperial") return `${Math.round(ms)} mph`;
+  return `${Math.round(ms)} m/s`;
+}
+
+function formatPressure(hPa) {
+  if (typeof hPa !== "number" || Number.isNaN(hPa)) return "—";
+  return `${Math.round(hPa)} hPa`;
+}
+
+function formatVisibility(m) {
+  if (typeof m !== "number" || Number.isNaN(m)) return "—";
+  const km = m / 1000;
+  return `${km.toFixed(km < 10 ? 1 : 0)} km`;
+}
+
+function weekdayShortFromUnix(unixSeconds, tzOffsetSeconds = 0) {
+  const d = new Date((unixSeconds + tzOffsetSeconds) * 1000);
+  return d.toLocaleDateString(undefined, { weekday: "short" });
+}
+
+function timeShortFromUnix(unixSeconds, tzOffsetSeconds = 0) {
+  const d = new Date((unixSeconds + tzOffsetSeconds) * 1000);
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function dayKeyFromUnix(unixSeconds, tzOffsetSeconds = 0) {
+  const d = new Date((unixSeconds + tzOffsetSeconds) * 1000);
+  // Use local YYYY-MM-DD
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${da}`;
+}
+
+function pickEmojiFromWeatherId(id) {
+  // OpenWeather condition codes: https://openweathermap.org/weather-conditions
+  if (id >= 200 && id < 300) return "⛈️";
+  if (id >= 300 && id < 600) return "🌧️";
+  if (id >= 600 && id < 700) return "❄️";
+  if (id >= 700 && id < 800) return "🌫️";
+  if (id === 800) return "☀️";
+  if (id > 800 && id < 900) return "⛅";
+  return "🌡️";
+}
+
+function owmIconUrl(icon) {
+  // Use @2x for crispness on retina
+  return `https://openweathermap.org/img/wn/${icon}@2x.png`;
+}
+
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.message ? ` (${body.message})` : "";
+    } catch {
+      // ignore
+    }
+    throw new Error(`Request failed: ${res.status}${detail}`);
+  }
+  return await res.json();
+}
+
+function buildDirectUrl(endpoint, params) {
+  const u = new URL(`https://api.openweathermap.org/data/2.5/${endpoint}`);
+  Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, String(v)));
+  u.searchParams.set("appid", OPENWEATHER_API_KEY);
+  u.searchParams.set("units", UNITS);
+  return u.toString();
+}
+
+function buildProxyUrl(path, params) {
+  const base = (API_BASE_URL && API_BASE_URL.trim().length)
+    ? API_BASE_URL.replace(/\/+$/, "")
+    : window.location.origin;
+  const u = new URL(`${base}${path}`);
+  Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, String(v)));
+  u.searchParams.set("units", UNITS);
+  return u.toString();
+}
+
+function usingProxy() {
+  // If API_BASE_URL is empty, we still use same-origin proxy (recommended).
+  return true;
+}
+
+function ensureKeyIfDirectMode() {
+  if (usingProxy()) return true;
+  if (OPENWEATHER_API_KEY && OPENWEATHER_API_KEY.trim().length > 0) return true;
+  return false;
+}
+
+async function getCurrentByCity(city) {
+  return await fetchJson(buildProxyUrl("/api/weather", { q: city }));
+}
+
+async function getForecastByCity(city) {
+  return await fetchJson(buildProxyUrl("/api/forecast", { q: city }));
+}
+
+function clearForecast() {
+  els.forecastGrid.innerHTML = "";
+}
+
+function renderForecastCard({ dayLabel, icon, emoji, min, max, desc }) {
+  const div = document.createElement("div");
+  div.className = "glass-sub rounded-2xl p-4";
+  div.innerHTML = `
+    <div class="flex items-center justify-between">
+      <div class="text-sm font-semibold">${escapeHtml(dayLabel)}</div>
+      <div class="text-lg" aria-hidden="true">${emoji}</div>
+    </div>
+    <div class="mt-3 flex items-center justify-between gap-3">
+      <img class="h-12 w-12" alt="Forecast icon" src="${escapeAttr(
+        owmIconUrl(icon)
+      )}" />
+      <div class="text-right">
+        <div class="text-xl font-semibold">${escapeHtml(
+          formatTemp(max)
+        )}</div>
+        <div class="text-xs text-white/70">${escapeHtml(
+          formatTemp(min)
+        )} min</div>
+      </div>
+    </div>
+    <div class="mt-3 text-xs text-white/70 capitalize">${escapeHtml(desc)}</div>
+  `;
+  return div;
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replaceAll("`", "&#096;");
+}
+
+function renderCurrent(current) {
+  const name = current?.name ?? "—";
+  const country = current?.sys?.country ? `, ${current.sys.country}` : "";
+  const tz = current?.timezone ?? 0;
+
+  const w = current?.weather?.[0];
+  const desc = w?.description ?? "—";
+  const icon = w?.icon ?? "01d";
+  const wid = w?.id ?? 800;
+
+  els.locationName.textContent = `${name}${country}`;
+  els.currentMeta.textContent = `Local time ${timeShortFromUnix(
+    Math.floor(Date.now() / 1000),
+    tz
+  )}`;
+
+  els.tempBig.textContent = formatTemp(current?.main?.temp);
+  els.descText.textContent = desc;
+  els.feelsLike.textContent = `Feels like ${formatTemp(
+    current?.main?.feels_like
+  )}`;
+
+  els.humidity.textContent =
+    typeof current?.main?.humidity === "number"
+      ? `${Math.round(current.main.humidity)}%`
+      : "—";
+  els.wind.textContent = formatSpeed(current?.wind?.speed);
+  els.pressure.textContent = formatPressure(current?.main?.pressure);
+  els.visibility.textContent = formatVisibility(current?.visibility);
+
+  els.currentIcon.src = owmIconUrl(icon);
+  els.currentIconEmoji.textContent = pickEmojiFromWeatherId(wid);
+
+  els.updatedAt.textContent = `Updated ${new Date().toLocaleString()}`;
+  els.unitsNote.textContent =
+    UNITS === "imperial" ? "Units: °F, mph" : "Units: °C, m/s";
+}
+
+function renderForecast(forecast) {
+  const tz = forecast?.city?.timezone ?? 0;
+  const list = Array.isArray(forecast?.list) ? forecast.list : [];
+
+  // Group 3-hour items by day in the city's local time (tz offset).
+  const byDay = new Map();
+  for (const item of list) {
+    const dt = item?.dt;
+    if (typeof dt !== "number") continue;
+    const key = dayKeyFromUnix(dt, tz);
+    const arr = byDay.get(key) ?? [];
+    arr.push(item);
+    byDay.set(key, arr);
+  }
+
+  // Choose a representative item for each day: closest to 12:00 local.
+  const targetHour = 12;
+  const days = Array.from(byDay.entries())
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .slice(0, 6); // includes today + next 5; we'll drop today if needed
+
+  const todayKey = dayKeyFromUnix(Math.floor(Date.now() / 1000), tz);
+  const picked = [];
+
+  for (const [key, items] of days) {
+    if (key === todayKey) continue; // forecast section is "next 5 days"
+
+    let best = null;
+    let bestDist = Infinity;
+    for (const it of items) {
+      const d = new Date((it.dt + tz) * 1000);
+      const hour = d.getUTCHours(); // because we already shifted by tz
+      const dist = Math.abs(hour - targetHour);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = it;
+      }
+    }
+    if (!best) continue;
+
+    const temps = items
+      .map((it) => it?.main?.temp)
+      .filter((t) => typeof t === "number" && !Number.isNaN(t));
+    const min = temps.length ? Math.min(...temps) : best?.main?.temp_min;
+    const max = temps.length ? Math.max(...temps) : best?.main?.temp_max;
+
+    const w = best?.weather?.[0];
+    const wid = w?.id ?? 800;
+    picked.push({
+      dayLabel: weekdayShortFromUnix(best.dt, tz),
+      icon: w?.icon ?? "01d",
+      emoji: pickEmojiFromWeatherId(wid),
+      min,
+      max,
+      desc: w?.description ?? "—",
+      key,
+    });
+  }
+
+  clearForecast();
+
+  for (const card of picked.slice(0, 5)) {
+    els.forecastGrid.appendChild(renderForecastCard(card));
+  }
+
+  if (!els.forecastGrid.children.length) {
+    const empty = document.createElement("div");
+    empty.className =
+      "col-span-full text-sm text-white/70 glass-sub rounded-2xl p-4";
+    empty.textContent = "No forecast data available.";
+    els.forecastGrid.appendChild(empty);
+  }
+}
+
+async function runSearch(city) {
+  const q = (city ?? "").trim();
+  if (!q) return;
+
+  if (!ensureKeyIfDirectMode()) {
+    setStatus(
+      "warn",
+      "No API key configured. Use the proxy approach (recommended) or set OPENWEATHER_API_KEY in app.js for a quick (public) demo."
+    );
+    return;
+  }
+
+  setStatus("info", "Loading weather…");
+
+  try {
+    const [current, forecast] = await Promise.all([
+      getCurrentByCity(q),
+      getForecastByCity(q),
+    ]);
+
+    renderCurrent(current);
+    renderForecast(forecast);
+    setStatus("", "");
+    localStorage.setItem("lastCity", q);
+  } catch (err) {
+    clearForecast();
+    setStatus(
+      "error",
+      `Could not load weather for "${q}". ${err?.message ?? ""}`.trim()
+    );
+  }
+}
+
+// ====== INIT ======
+els.form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  runSearch(els.input.value);
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  const last = localStorage.getItem("lastCity") || DEFAULT_CITY;
+  els.input.value = last;
+  runSearch(last);
+});
+
