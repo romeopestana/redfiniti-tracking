@@ -199,6 +199,29 @@
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
+
+      const shippingLine = document.getElementById("shippingLine").value;
+      const containerNumber = document
+        .getElementById("containerNumber")
+        .value.trim();
+
+      if (!shippingLine) {
+        alert("Please select a shipping line.");
+        return;
+      }
+
+      if (shippingLine === "MACS") {
+        // Open MACS schedules site
+        window.open("https://www.macship.com/SCHEDULES", "_blank");
+        return;
+      }
+
+      if (shippingLine === "MSC") {
+        window.open("https://www.msc.com/en/track-a-shipment", "_blank");
+        return;
+      }
+
+      // Default behaviour (e.g. Bobs shipping) – show dummy tracking result
       resultCard.classList.remove("hidden");
       resultCard.classList.add("fade-in");
     });
