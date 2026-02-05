@@ -27,9 +27,18 @@
   </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800">
-  <!-- Top bar: Shesha-style header -->
-  <header class="bg-[#1e3a5f] text-white shadow-md">
-    <div class="max-w-4xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <!-- Top bar: Shesha-style header with image banner -->
+  <header class="relative text-white shadow-md">
+    <!-- Full-width header image -->
+    <img
+      src="shesha header.avif"
+      alt="Shesha Logistics header"
+      class="absolute inset-0 w-full h-full object-cover"
+    />
+    <!-- Subtle overlay for readability -->
+    <div class="absolute inset-0 bg-black/30"></div>
+
+    <div class="relative max-w-4xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div class="flex items-center gap-4">
         <div class="flex items-center justify-center overflow-hidden">
           <img
@@ -112,7 +121,7 @@
               <option value="" disabled selected>Select a shipping line</option>
               <option value="MACS">MACS</option>
               <option value="MSC">MSC</option>
-              <option value="Bobs shipping">Bobs shipping</option>
+              <option value="Test Account">Test Account</option>
             </select>
           </div>
 
@@ -221,7 +230,7 @@
         return;
       }
 
-      // Default behaviour (e.g. Bobs shipping) – show dummy tracking result
+      // Default behaviour (e.g. Test Account) – show dummy tracking result
       resultCard.classList.remove("hidden");
       resultCard.classList.add("fade-in");
     });
