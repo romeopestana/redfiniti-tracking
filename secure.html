@@ -149,7 +149,17 @@
     const logoutBtn = document.getElementById("logoutBtn");
     if (logoutBtn) {
       logoutBtn.addEventListener("click", () => {
-        window.location.href = "indexshipping.html";
+        // If opened from the main tracking page, refresh it and then close this tab/window
+        try {
+          if (window.opener && !window.opener.closed) {
+            // Refresh main page so any session state is cleared/updated
+            window.opener.location.reload();
+            window.opener.focus();
+          }
+        } catch (e) {
+          // ignore cross-origin issues
+        }
+        window.close();
       });
     }
 

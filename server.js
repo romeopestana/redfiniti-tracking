@@ -161,6 +161,56 @@ app.get("/api/tab", async (req, res) => {
   }
 });
 
+// Login endpoint: validate username/password against USRPWD tab
+// Tab USRPWD:
+// - Column A (Client): tab name to open
+// - Column B (USERNAME): login username
+// - Column C (PWD): login password
+app.post("/api/login", async (req, res) => {
+  const username = (req.body.username || "").trim();
+  const password = (req.body.password || "").trim();
+
+  if (!username || !password) {
+    return res.status(400).json({ error: "Missing username or password" });
+  }
+
+  try {
+    const sheets = await getSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: "USRPWD!A1:C1000",
+    });
+
+    const rows = response.data.values || [];
+    if (rows.length < 2) {
+      return res.status(404).json({ error: "No user data in USRPWD tab" });
+    }
+
+    // Assume row 1 is header (Client, USERNAME, PWD); data starts from row 2
+    const dataRows = rows.slice(1);
+    const match = dataRows.find((row) => {
+      const rowClient = (row[0] || "").trim();
+      const rowUser = (row[1] || "").trim();
+      const rowPwd = (row[2] || "").trim();
+      return rowUser === username && rowPwd === password && rowClient;
+    });
+
+    if (!match) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    const clientTab = (match[0] || "").trim();
+    if (!clientTab) {
+      return res.status(500).json({ error: "Client tab not configured for this user" });
+    }
+
+    res.json({ client: clientTab, username });
+  } catch (err) {
+    console.error("Error during login:", err?.response?.data || err.message || err);
+    res.status(500).json({ error: "Failed to validate login" });
+  }
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

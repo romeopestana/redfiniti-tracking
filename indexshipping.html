@@ -60,15 +60,15 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-4 py-8">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="flex justify-center">
       <!-- Secure Customer Access (left / first) -->
-      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-        <h2 class="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-2">
-          Secure Customer Access
-        </h2>
-        <p class="text-sm text-slate-600 mb-6">
-          Enter your username (tab name) and password to unlock more detailed shipment information.
-        </p>
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 w-full max-w-md">
+      <h2 class="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-2">
+        Secure Customer Access
+      </h2>
+      <p class="text-sm text-slate-600 mb-6">
+        Enter your username and password to access your shipment information.
+      </p>
 
         <form class="space-y-4">
           <div class="space-y-1.5">
@@ -103,8 +103,8 @@
         </form>
       </section>
 
-      <!-- Today's Live Tracking (right / second) -->
-      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+      <!-- Today's Live Tracking (right / second) - temporarily hidden -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 hidden">
         <h2 class="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2 mb-6">
           Today's Live Tracking
         </h2>
@@ -245,12 +245,35 @@
           alert("Please enter both username and password.");
           return;
         }
-        if (password !== "1234") {
-          alert("Incorrect password.");
-          return;
+
+        try {
+          const response = await fetch("/api/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Login failed. Please check your credentials.");
+            return;
+          }
+
+          const clientTab = data.client;
+          if (!clientTab) {
+            alert("Login succeeded but no client tab was configured for this user.");
+            return;
+          }
+
+          const url = `secure.html?sheet=${encodeURIComponent(clientTab)}`;
+          window.open(url, "_blank");
+        } catch (err) {
+          console.error(err);
+          alert("An error occurred while contacting the login service.");
         }
-        const url = `secure.html?sheet=${encodeURIComponent(username)}`;
-        window.open(url, "_blank");
       });
     }
   </script>
