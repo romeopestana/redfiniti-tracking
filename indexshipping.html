@@ -281,7 +281,7 @@
           }
 
           const url = `secure.html?sheet=${encodeURIComponent(clientTab)}`;
-          window.open(url, "_blank");
+          window.location.href = url;
         } catch (err) {
           console.error(err);
           alert("An error occurred while contacting the login service.");
