@@ -211,6 +211,63 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// Get PDF export URL for a specific tab (landscape mode)
+// GET /api/pdf-url?sheet=TabName
+app.get("/api/pdf-url", async (req, res) => {
+  const sheetName = (req.query.sheet || "").trim();
+  if (!sheetName) {
+    return res.status(400).json({ error: "Missing sheet/tab name" });
+  }
+
+  try {
+    const sheets = await getSheetsClient();
+    // Get spreadsheet metadata to find the tab ID (gid)
+    const metadata = await sheets.spreadsheets.get({
+      spreadsheetId: SHEET_ID,
+      fields: "sheets.properties(title,sheetId)",
+    });
+
+    const sheetsList = metadata.data.sheets || [];
+    console.log("Available tabs:", sheetsList.map(s => s.properties?.title));
+    console.log("Looking for tab:", sheetName);
+
+    // Try exact match first
+    let targetSheet = sheetsList.find(
+      (s) => (s.properties?.title || "").trim() === sheetName
+    );
+
+    // If not found, try case-insensitive match
+    if (!targetSheet) {
+      targetSheet = sheetsList.find(
+        (s) => (s.properties?.title || "").trim().toLowerCase() === sheetName.toLowerCase()
+      );
+    }
+
+    if (!targetSheet || !targetSheet.properties?.sheetId) {
+      console.error("Tab not found. Available tabs:", sheetsList.map(s => s.properties?.title));
+      return res.status(404).json({ 
+        error: `Tab "${sheetName}" not found. Available tabs: ${sheetsList.map(s => s.properties?.title).join(", ")}` 
+      });
+    }
+
+    const tabId = targetSheet.properties.sheetId;
+    console.log("Found tab ID:", tabId, "for tab:", targetSheet.properties.title);
+    
+    // Construct Google Sheets PDF export URL (landscape mode)
+    // portrait=false means landscape
+    const pdfUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=pdf&gid=${tabId}&portrait=false`;
+
+    res.json({ pdfUrl });
+  } catch (err) {
+    console.error("Error getting PDF URL:", err?.response?.data || err.message || err);
+    const errorMsg = err?.response?.data?.error?.message || err.message || "Unknown error";
+    res.status(500).json({ 
+      error: "Failed to generate PDF URL",
+      details: errorMsg 
+    });
+  }
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
