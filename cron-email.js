@@ -310,6 +310,26 @@ async function runDailyEmailJob() {
         // Get tab ID
         const tabId = await getTabId(sheets, clientTab);
         
+        // Check if the client tab has any data from row 3 downwards
+        console.log(`Row ${rowNum} (${clientTab}): Checking for data from row 3 downwards...`);
+        const tabDataResponse = await sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: `${clientTab}!A3:Z5000`,
+        });
+        const tabDataRows = tabDataResponse.data.values || [];
+        const hasDataFromRow3 = tabDataRows.some((r) =>
+          (r || []).some((cell) => (cell || "").toString().trim() !== "")
+        );
+
+        if (!hasDataFromRow3) {
+          console.log(
+            `Row ${rowNum} (${clientTab}): Skipping - no data found from row 3 downwards`
+          );
+          // Still delay a bit to be gentle with API limits
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          continue;
+        }
+        
         // Download PDF
         const pdfBuffer = await downloadPDF(clientTab, tabId);
         console.log(`Row ${rowNum} (${clientTab}): PDF downloaded (${pdfBuffer.length} bytes)`);
