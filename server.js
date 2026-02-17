@@ -479,16 +479,64 @@ app.post("/api/email-pdf", async (req, res) => {
         },
       });
     } else {
+      // Debug SMTP credentials (without exposing password)
+      const smtpUser = (emailConfig.auth.user || "").trim();
+      const smtpPassLength = (emailConfig.auth.pass || "").length;
+      const smtpPassHasSpaces = (emailConfig.auth.pass || "").includes(" ");
+      
+      console.log("SMTP credentials check:", {
+        user: smtpUser ? `${smtpUser.substring(0, 3)}***@${smtpUser.split("@")[1] || "unknown"}` : "EMPTY",
+        userLength: smtpUser.length,
+        passLength: smtpPassLength,
+        passHasSpaces: smtpPassHasSpaces,
+        host: emailConfig.host,
+        port: emailConfig.port,
+      });
+
+      // Check for common issues
+      if (!smtpUser || smtpUser.length < 5) {
+        throw new Error("SMTP_USER is empty or invalid. Please set a valid Gmail address.");
+      }
+      if (!smtpUser.includes("@")) {
+        throw new Error("SMTP_USER must be a valid email address (e.g., yourname@gmail.com)");
+      }
+      if (smtpPassLength === 0) {
+        throw new Error("SMTP_PASS is empty. Please set your Gmail App Password.");
+      }
+      if (smtpPassLength !== 16 && smtpPassHasSpaces) {
+        console.warn("WARNING: App Password appears to have spaces. Gmail App Passwords should be 16 characters with no spaces.");
+      }
+      if (smtpPassLength < 16) {
+        console.warn(`WARNING: App Password length is ${smtpPassLength}, expected 16 characters.`);
+      }
+
       transporter = nodemailer.createTransport(emailConfig);
     }
 
     // Verify SMTP connection before sending (skip for SendGrid to avoid timeout)
     if (!useSendGrid) {
       try {
+        console.log("Verifying SMTP connection...");
         await transporter.verify();
         console.log("SMTP server connection verified");
       } catch (verifyErr) {
-        console.error("SMTP verification failed:", verifyErr);
+        console.error("SMTP verification failed:", {
+          code: verifyErr.code,
+          command: verifyErr.command,
+          response: verifyErr.response,
+          message: verifyErr.message,
+        });
+        
+        if (verifyErr.code === "EAUTH") {
+          throw new Error(
+            "Gmail authentication failed. Please verify:\n" +
+            "1. You're using a Gmail App Password (not your regular password)\n" +
+            "2. App Password has no spaces (16 characters total)\n" +
+            "3. 2-Factor Authentication is enabled on your Google account\n" +
+            "4. SMTP_USER is your full Gmail address\n" +
+            `Error: ${verifyErr.message}`
+          );
+        }
         throw new Error(`SMTP connection failed: ${verifyErr.message}`);
       }
     } else {
@@ -553,6 +601,65 @@ app.post("/api/email-pdf", async (req, res) => {
   }
 });
 
+// Test SMTP connection endpoint (for debugging)
+app.get("/api/test-smtp", async (req, res) => {
+  const useSendGrid = process.env.SENDGRID_API_KEY;
+  
+  if (useSendGrid) {
+    return res.json({ 
+      method: "SendGrid",
+      status: "SendGrid API key is set. Use SendGrid for email.",
+    });
+  }
+
+  const emailConfig = {
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  };
+
+  if (!emailConfig.auth.user || !emailConfig.auth.pass) {
+    return res.status(400).json({
+      error: "SMTP credentials not configured",
+      SMTP_USER: process.env.SMTP_USER ? "SET" : "NOT SET",
+      SMTP_PASS: process.env.SMTP_PASS ? "SET" : "NOT SET",
+    });
+  }
+
+  try {
+    const transporter = nodemailer.createTransport(emailConfig);
+    await transporter.verify();
+    res.json({
+      success: true,
+      message: "SMTP connection successful!",
+      config: {
+        host: emailConfig.host,
+        port: emailConfig.port,
+        user: `${emailConfig.auth.user.substring(0, 3)}***@${emailConfig.auth.user.split("@")[1] || "unknown"}`,
+        passLength: emailConfig.auth.pass.length,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "SMTP connection failed",
+      code: err.code,
+      message: err.message,
+      response: err.response,
+      troubleshooting: err.code === "EAUTH" ? {
+        step1: "Verify you're using a Gmail App Password (not your regular password)",
+        step2: "Check that App Password has no spaces (should be exactly 16 characters)",
+        step3: "Ensure 2-Factor Authentication is enabled",
+        step4: "Verify SMTP_USER is your full Gmail address",
+        step5: "Generate a new App Password at: https://myaccount.google.com/apppasswords",
+      } : null,
+    });
+  }
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
@@ -564,8 +671,8 @@ app.listen(PORT, () => {
     SMTP_HOST: process.env.SMTP_HOST || "not set (default: smtp.gmail.com)",
     SMTP_PORT: process.env.SMTP_PORT || "not set (default: 587)",
     SMTP_SECURE: process.env.SMTP_SECURE || "not set (default: false)",
-    SMTP_USER: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}***` : "NOT SET",
-    SMTP_PASS: process.env.SMTP_PASS ? "SET" : "NOT SET",
+    SMTP_USER: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}***@${process.env.SMTP_USER.split("@")[1] || "unknown"}` : "NOT SET",
+    SMTP_PASS: process.env.SMTP_PASS ? `SET (length: ${process.env.SMTP_PASS.length})` : "NOT SET",
     FROM_EMAIL: process.env.FROM_EMAIL || "not set (will use SMTP_USER)",
   });
 });
