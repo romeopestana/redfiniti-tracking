@@ -346,21 +346,67 @@ app.post("/api/email-pdf", async (req, res) => {
     return res.status(400).json({ error: "Invalid email address format" });
   }
 
-  // Email configuration from environment variables
-  const emailConfig = {
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  };
+  // Check if using SendGrid (preferred for Render) or SMTP
+  const useSendGrid = process.env.SENDGRID_API_KEY;
+  
+  let emailConfig;
+  if (useSendGrid) {
+    // SendGrid configuration (works better on Render)
+    emailConfig = {
+      service: "SendGrid",
+      auth: {
+        user: "apikey",
+        pass: process.env.SENDGRID_API_KEY,
+      },
+    };
+    console.log("Using SendGrid for email delivery");
+  } else {
+    // SMTP configuration (may be blocked on Render free tier)
+    emailConfig = {
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    };
+    console.log("Using SMTP for email delivery");
+  }
 
-  if (!emailConfig.auth.user || !emailConfig.auth.pass) {
-    return res.status(500).json({ 
-      error: "Email service not configured. Please set SMTP_USER and SMTP_PASS environment variables." 
-    });
+  // Log configuration (without password) for debugging
+  console.log("Email config check:", {
+    method: useSendGrid ? "SendGrid" : "SMTP",
+    host: emailConfig.host || "SendGrid",
+    port: emailConfig.port || "N/A",
+    secure: emailConfig.secure || false,
+    user: emailConfig.auth.user ? `${emailConfig.auth.user.substring(0, 3)}***` : "NOT SET",
+    passSet: emailConfig.auth.pass ? "YES" : "NO",
+  });
+
+  if (useSendGrid) {
+    if (!process.env.SENDGRID_API_KEY) {
+      return res.status(500).json({ 
+        error: "SendGrid API key not configured. Please set SENDGRID_API_KEY environment variable." 
+      });
+    }
+  } else {
+    if (!emailConfig.auth.user || !emailConfig.auth.pass) {
+      console.error("SMTP configuration missing:", {
+        SMTP_USER: process.env.SMTP_USER ? "SET" : "NOT SET",
+        SMTP_PASS: process.env.SMTP_PASS ? "SET" : "NOT SET",
+        SMTP_HOST: process.env.SMTP_HOST || "default (smtp.gmail.com)",
+        SMTP_PORT: process.env.SMTP_PORT || "default (587)",
+      });
+      return res.status(500).json({ 
+        error: "Email service not configured. Please set SMTP_USER and SMTP_PASS (or SENDGRID_API_KEY) environment variables.",
+        debug: {
+          SMTP_USER: process.env.SMTP_USER ? "SET" : "NOT SET",
+          SMTP_PASS: process.env.SMTP_PASS ? "SET" : "NOT SET",
+          SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? "SET" : "NOT SET",
+        }
+      });
+    }
   }
 
   try {
@@ -417,13 +463,44 @@ app.post("/api/email-pdf", async (req, res) => {
       throw new Error(`Failed to download PDF: ${pdfHttpResponse.statusText} - ${errorText}`);
     }
     const pdfBuffer = Buffer.from(await pdfHttpResponse.arrayBuffer());
+    console.log(`PDF downloaded successfully, size: ${pdfBuffer.length} bytes`);
 
     // Create email transporter
-    const transporter = nodemailer.createTransport(emailConfig);
+    let transporter;
+    if (useSendGrid) {
+      // SendGrid uses smtp.sendgrid.net
+      transporter = nodemailer.createTransport({
+        host: "smtp.sendgrid.net",
+        port: 587,
+        secure: false,
+        auth: {
+          user: "apikey",
+          pass: process.env.SENDGRID_API_KEY,
+        },
+      });
+    } else {
+      transporter = nodemailer.createTransport(emailConfig);
+    }
 
+    // Verify SMTP connection before sending (skip for SendGrid to avoid timeout)
+    if (!useSendGrid) {
+      try {
+        await transporter.verify();
+        console.log("SMTP server connection verified");
+      } catch (verifyErr) {
+        console.error("SMTP verification failed:", verifyErr);
+        throw new Error(`SMTP connection failed: ${verifyErr.message}`);
+      }
+    } else {
+      console.log("Using SendGrid - skipping connection verification");
+    }
+
+    // Determine sender email (use FROM_EMAIL env var or SMTP_USER)
+    const fromEmail = process.env.FROM_EMAIL || emailConfig.auth.user || "noreply@sheshalogistics.com";
+    
     // Send email with PDF attachment
     const mailOptions = {
-      from: `"Shesha Logistics" <${emailConfig.auth.user}>`,
+      from: `"Shesha Logistics" <${fromEmail}>`,
       to: email,
       subject: `Shipment Tracking Report - ${targetSheet.properties.title}`,
       text: `Please find attached your shipment tracking report for ${targetSheet.properties.title}.`,
@@ -441,17 +518,37 @@ app.post("/api/email-pdf", async (req, res) => {
       ],
     };
 
-    await transporter.sendMail(mailOptions);
+    console.log(`Attempting to send email to ${email}...`);
+    const emailResult = await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully:", emailResult.messageId);
 
     res.json({ 
       success: true, 
       message: `PDF has been sent to ${email}` 
     });
   } catch (err) {
-    console.error("Error emailing PDF:", err);
+    console.error("Error emailing PDF:", {
+      message: err.message,
+      code: err.code,
+      command: err.command,
+      response: err.response,
+      responseCode: err.responseCode,
+      stack: err.stack,
+    });
+    
+    let errorMessage = "Failed to email PDF";
+    if (err.code === "EAUTH") {
+      errorMessage = "Email authentication failed. Please check SMTP_USER and SMTP_PASS.";
+    } else if (err.code === "ECONNECTION") {
+      errorMessage = `Cannot connect to SMTP server (${emailConfig.host}:${emailConfig.port}). Check SMTP_HOST and SMTP_PORT.`;
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+
     res.status(500).json({ 
-      error: "Failed to email PDF",
-      details: err.message 
+      error: errorMessage,
+      details: err.message,
+      code: err.code,
     });
   }
 });
@@ -459,6 +556,18 @@ app.post("/api/email-pdf", async (req, res) => {
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  
+  // Log email configuration status (without sensitive data)
+  console.log("Email configuration status:", {
+    method: process.env.SENDGRID_API_KEY ? "SendGrid" : "SMTP",
+    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? "SET" : "NOT SET",
+    SMTP_HOST: process.env.SMTP_HOST || "not set (default: smtp.gmail.com)",
+    SMTP_PORT: process.env.SMTP_PORT || "not set (default: 587)",
+    SMTP_SECURE: process.env.SMTP_SECURE || "not set (default: false)",
+    SMTP_USER: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}***` : "NOT SET",
+    SMTP_PASS: process.env.SMTP_PASS ? "SET" : "NOT SET",
+    FROM_EMAIL: process.env.FROM_EMAIL || "not set (will use SMTP_USER)",
+  });
 });
 
 
