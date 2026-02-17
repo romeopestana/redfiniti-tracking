@@ -319,8 +319,8 @@ async function runDailyEmailJob() {
         console.log(`Row ${rowNum} (${clientTab}): Email sent successfully to ${emails.join(", ")}`);
         successCount++;
 
-        // Small delay between emails to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Delay between rows to reduce Google rate limiting (5 seconds)
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (err) {
         console.error(`Row ${rowNum} (${clientTab}): Error - ${err.message}`);
         errorCount++;
