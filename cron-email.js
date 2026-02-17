@@ -16,9 +16,46 @@ const __dirname = path.dirname(__filename);
 const SHEET_ID = "10y_pzCwdu-iqdylknQKFvZvz1EP-bHBIqAGBB4660kY";
 const KEYFILE = path.join(__dirname, "service-account-key.json");
 
+// Validate configuration
+console.log("=== Cron Job Startup ===");
+console.log("Node version:", process.version);
+console.log("Working directory:", process.cwd());
+console.log("KEYFILE path:", KEYFILE);
+console.log("KEYFILE exists:", fs.existsSync(KEYFILE));
+
 // On Render: create service-account-key.json from env if file doesn't exist
 if (process.env.SERVICE_ACCOUNT_JSON && !fs.existsSync(KEYFILE)) {
-  fs.writeFileSync(KEYFILE, process.env.SERVICE_ACCOUNT_JSON, "utf8");
+  console.log("Creating service-account-key.json from SERVICE_ACCOUNT_JSON env var...");
+  try {
+    fs.writeFileSync(KEYFILE, process.env.SERVICE_ACCOUNT_JSON, "utf8");
+    console.log("✓ service-account-key.json created successfully");
+  } catch (err) {
+    console.error("✗ Failed to create service-account-key.json:", err.message);
+    process.exit(1);
+  }
+}
+
+if (!fs.existsSync(KEYFILE)) {
+  console.error("✗ ERROR: service-account-key.json not found and SERVICE_ACCOUNT_JSON not set");
+  console.error("Please set SERVICE_ACCOUNT_JSON environment variable in Render");
+  process.exit(1);
+}
+
+// Check email configuration
+const useSendGrid = !!process.env.SENDGRID_API_KEY;
+const hasSMTP = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+
+console.log("Email config:", {
+  method: useSendGrid ? "SendGrid" : hasSMTP ? "SMTP" : "NOT CONFIGURED",
+  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? "SET" : "NOT SET",
+  SMTP_USER: process.env.SMTP_USER ? "SET" : "NOT SET",
+  SMTP_PASS: process.env.SMTP_PASS ? "SET" : "NOT SET",
+});
+
+if (!useSendGrid && !hasSMTP) {
+  console.error("✗ ERROR: No email configuration found");
+  console.error("Please set either SENDGRID_API_KEY or SMTP_USER/SMTP_PASS");
+  process.exit(1);
 }
 
 async function getSheetsClient() {
@@ -142,10 +179,15 @@ async function sendEmail(transporter, emails, tabName, pdfBuffer) {
 }
 
 async function runDailyEmailJob() {
-  console.log(`[${new Date().toISOString()}] Starting daily email job...`);
+  const startTime = new Date().toISOString();
+  console.log(`\n[${startTime}] ========================================`);
+  console.log(`[${startTime}] Starting daily email job...`);
+  console.log(`[${startTime}] ========================================\n`);
 
   try {
+    console.log("Connecting to Google Sheets...");
     const sheets = await getSheetsClient();
+    console.log("✓ Connected to Google Sheets API");
     
     // Read USRPWD tab - columns A (Client), D-M (emails)
     const response = await sheets.spreadsheets.values.get({
@@ -213,22 +255,44 @@ async function runDailyEmailJob() {
       }
     }
 
-    console.log(`\n[${new Date().toISOString()}] Daily email job completed:`);
+    const endTime = new Date().toISOString();
+    console.log(`\n[${endTime}] ========================================`);
+    console.log(`[${endTime}] Daily email job completed:`);
     console.log(`  Success: ${successCount} rows`);
     console.log(`  Errors: ${errorCount} rows`);
+    console.log(`[${endTime}] ========================================\n`);
   } catch (err) {
-    console.error(`Fatal error in daily email job:`, err);
-    process.exit(1);
+    console.error(`\n[${new Date().toISOString()}] FATAL ERROR in daily email job:`);
+    console.error("Error message:", err.message);
+    console.error("Error stack:", err.stack);
+    if (err.response) {
+      console.error("Error response:", err.response);
+    }
+    throw err; // Re-throw to be caught by outer handler
   }
 }
 
-// Run the job
-runDailyEmailJob()
-  .then(() => {
-    console.log("Job finished successfully");
+// Run the job with comprehensive error handling
+(async () => {
+  try {
+    await runDailyEmailJob();
+    console.log("\n✓ Job finished successfully");
     process.exit(0);
-  })
-  .catch((err) => {
-    console.error("Job failed:", err);
+  } catch (err) {
+    console.error("\n✗ Job failed with error:");
+    console.error("Message:", err.message);
+    console.error("Code:", err.code);
+    console.error("Stack:", err.stack);
+    
+    // Provide helpful error messages
+    if (err.message.includes("service-account-key.json")) {
+      console.error("\n💡 TIP: Make sure SERVICE_ACCOUNT_JSON is set in Render environment variables");
+    } else if (err.message.includes("SMTP") || err.message.includes("email")) {
+      console.error("\n💡 TIP: Check your email configuration (SMTP_USER/SMTP_PASS or SENDGRID_API_KEY)");
+    } else if (err.message.includes("SHEET_ID") || err.message.includes("spreadsheet")) {
+      console.error("\n💡 TIP: Verify the Google Sheet is shared with your service account email");
+    }
+    
     process.exit(1);
-  });
+  }
+})();
