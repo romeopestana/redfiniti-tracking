@@ -7,12 +7,18 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     #secureTable { table-layout: auto; }
-    #secureTable th,
-    #secureTable td {
+    #secureTable th {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 20rem;
+    }
+    #secureTable td {
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 20rem;
+      min-width: 8rem;
     }
     #secureTable thead th {
       background: #1e3a5f;
@@ -74,6 +80,9 @@
       #secureTable tbody td {
         border: 1px solid #ccc;
         padding: 0.4rem 0.5rem;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
       }
       #secureTable tbody tr {
         page-break-inside: avoid;
