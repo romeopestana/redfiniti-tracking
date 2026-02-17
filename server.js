@@ -56,7 +56,7 @@ app.get("/api/containers", async (req, res) => {
 
   try {
     // Default to "Sheet1" tab for this endpoint
-    const RANGE = "Sheet1!A1:Z1000";
+    const RANGE = "Sheet1!A1:Z5000";
 
     const sheets = await getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
@@ -110,7 +110,7 @@ app.get("/api/tab", async (req, res) => {
   try {
     // Quote sheet name to support spaces/special characters, escape single quotes per Sheets A1 syntax
     const safeSheetName = `'${sheetName.replace(/'/g, "''")}'`;
-    const range = `${safeSheetName}!A1:Z1000`;
+    const range = `${safeSheetName}!A1:Z5000`;
 
     const sheets = await getSheetsClient();
     // Use spreadsheets.get with grid data so we can see which rows are hidden
@@ -183,7 +183,7 @@ app.post("/api/login", async (req, res) => {
     const sheets = await getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: "USRPWD!A1:M1000", // Columns A-M to include email addresses (D-M)
+      range: "USRPWD!A1:M5000", // Columns A-M to include email addresses (D-M)
     });
 
     const rows = response.data.values || [];
@@ -238,7 +238,7 @@ app.get("/api/authorized-emails", async (req, res) => {
     const sheets = await getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: "USRPWD!A1:M1000",
+      range: "USRPWD!A1:M5000",
     });
 
     const rows = response.data.values || [];

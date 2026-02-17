@@ -263,7 +263,7 @@ async function runDailyEmailJob() {
     console.log("Reading USRPWD tab...");
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: "USRPWD!A1:M1000",
+      range: "USRPWD!A1:M5000",
     });
     console.log(`✓ Read ${response.data.values?.length || 0} rows from USRPWD tab`);
 
