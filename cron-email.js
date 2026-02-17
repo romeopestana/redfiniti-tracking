@@ -27,10 +27,16 @@ console.log("KEYFILE exists:", fs.existsSync(KEYFILE));
 if (process.env.SERVICE_ACCOUNT_JSON && !fs.existsSync(KEYFILE)) {
   console.log("Creating service-account-key.json from SERVICE_ACCOUNT_JSON env var...");
   try {
-    fs.writeFileSync(KEYFILE, process.env.SERVICE_ACCOUNT_JSON, "utf8");
+    const jsonContent = process.env.SERVICE_ACCOUNT_JSON;
+    // Validate it's valid JSON
+    JSON.parse(jsonContent);
+    fs.writeFileSync(KEYFILE, jsonContent, "utf8");
     console.log("✓ service-account-key.json created successfully");
   } catch (err) {
     console.error("✗ Failed to create service-account-key.json:", err.message);
+    if (err instanceof SyntaxError) {
+      console.error("✗ SERVICE_ACCOUNT_JSON is not valid JSON");
+    }
     process.exit(1);
   }
 }
@@ -38,6 +44,21 @@ if (process.env.SERVICE_ACCOUNT_JSON && !fs.existsSync(KEYFILE)) {
 if (!fs.existsSync(KEYFILE)) {
   console.error("✗ ERROR: service-account-key.json not found and SERVICE_ACCOUNT_JSON not set");
   console.error("Please set SERVICE_ACCOUNT_JSON environment variable in Render");
+  process.exit(1);
+}
+
+// Validate the key file is valid JSON
+try {
+  const keyContent = fs.readFileSync(KEYFILE, "utf8");
+  const keyData = JSON.parse(keyContent);
+  console.log("✓ service-account-key.json is valid JSON");
+  console.log("Service account email:", keyData.client_email || "NOT FOUND");
+  if (!keyData.client_email || !keyData.private_key) {
+    console.error("✗ ERROR: service-account-key.json is missing required fields (client_email or private_key)");
+    process.exit(1);
+  }
+} catch (err) {
+  console.error("✗ ERROR: service-account-key.json is not valid JSON:", err.message);
   process.exit(1);
 }
 
@@ -59,15 +80,34 @@ if (!useSendGrid && !hasSMTP) {
 }
 
 async function getSheetsClient() {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: KEYFILE,
-    scopes: [
-      "https://www.googleapis.com/auth/spreadsheets.readonly",
-      "https://www.googleapis.com/auth/drive.readonly",
-    ],
-  });
-  const client = await auth.getClient();
-  return google.sheets({ version: "v4", auth: client });
+  try {
+    console.log("Initializing Google Auth...");
+    const auth = new google.auth.GoogleAuth({
+      keyFile: KEYFILE,
+      scopes: [
+        "https://www.googleapis.com/auth/spreadsheets.readonly",
+        "https://www.googleapis.com/auth/drive.readonly",
+      ],
+    });
+    
+    console.log("Getting authenticated client...");
+    const client = await auth.getClient();
+    
+    // Verify we can get credentials
+    const credentials = await client.getAccessToken();
+    if (!credentials.token) {
+      throw new Error("Failed to get access token from service account");
+    }
+    console.log("✓ Successfully authenticated with Google");
+    
+    return google.sheets({ version: "v4", auth: client });
+  } catch (err) {
+    console.error("✗ Error initializing Google Sheets client:", err.message);
+    if (err.message.includes("ENOENT")) {
+      throw new Error(`Service account key file not found at ${KEYFILE}. Check SERVICE_ACCOUNT_JSON environment variable.`);
+    }
+    throw err;
+  }
 }
 
 async function getEmailTransporter() {
@@ -189,11 +229,43 @@ async function runDailyEmailJob() {
     const sheets = await getSheetsClient();
     console.log("✓ Connected to Google Sheets API");
     
+    // Test connection by getting spreadsheet metadata first
+    console.log("Verifying access to spreadsheet...");
+    try {
+      const testResponse = await sheets.spreadsheets.get({
+        spreadsheetId: SHEET_ID,
+        fields: "properties.title",
+      });
+      console.log(`✓ Access verified. Spreadsheet: ${testResponse.data.properties?.title || "Unknown"}`);
+    } catch (testErr) {
+      console.error("✗ Cannot access spreadsheet:", testErr.message);
+      console.error("Error code:", testErr.code);
+      console.error("Error response:", testErr.response?.data);
+      
+      if (testErr.message.includes("unregistered callers") || testErr.message.includes("API key")) {
+        throw new Error(
+          `Google Sheets API authentication failed.\n\n` +
+          `This usually means:\n` +
+          `1. Google Sheets API is not enabled in your Google Cloud project\n` +
+          `   → Go to: https://console.cloud.google.com/apis/library/sheets.googleapis.com\n` +
+          `   → Enable "Google Sheets API"\n\n` +
+          `2. The service account key file is invalid or corrupted\n` +
+          `   → Regenerate the service account key in Google Cloud Console\n\n` +
+          `3. The service account email needs access to the sheet\n` +
+          `   → Share the Google Sheet with: ${JSON.parse(fs.readFileSync(KEYFILE, "utf8")).client_email || "service account email"}`
+        );
+      }
+      
+      throw new Error(`Cannot access Google Sheet: ${testErr.message}`);
+    }
+    
     // Read USRPWD tab - columns A (Client), D-M (emails)
+    console.log("Reading USRPWD tab...");
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
       range: "USRPWD!A1:M1000",
     });
+    console.log(`✓ Read ${response.data.values?.length || 0} rows from USRPWD tab`);
 
     const rows = response.data.values || [];
     if (rows.length < 2) {
