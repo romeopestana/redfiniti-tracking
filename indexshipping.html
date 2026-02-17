@@ -289,6 +289,12 @@
             return;
           }
 
+          // Store username and authorized emails in sessionStorage for use in secure.html
+          sessionStorage.setItem("loggedInUsername", username);
+          if (data.authorizedEmails) {
+            sessionStorage.setItem("authorizedEmails", JSON.stringify(data.authorizedEmails));
+          }
+
           const url = `secure.html?sheet=${encodeURIComponent(clientTab)}`;
           window.location.href = url;
         } catch (err) {
