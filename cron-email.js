@@ -198,12 +198,18 @@ async function sendEmail(transporter, emails, tabName, pdfBuffer) {
     from: `"Shesha Logistics" <${fromEmail}>`,
     to: emails.join(", "),
     subject: `Daily Shipment Tracking Report - ${tabName}`,
-    text: `Please find attached your daily shipment tracking report for ${tabName}.`,
+    text: `Please find your daily tracking report for your active shipments attached.
+
+For real-time updates throughout the day, you can access live tracking by logging into our website at www.sheshalogistics.com.
+
+Wishing you a pleasant day.
+
+The Shesha Team`,
     html: `
-      <p>Dear Customer,</p>
-      <p>Please find attached your daily shipment tracking report for <strong>${tabName}</strong>.</p>
-      <p>This is an automated daily report.</p>
-      <p>Best regards,<br>Shesha Logistics</p>
+      <p>Please find your daily tracking report for your active shipments attached.</p>
+      <p>For real-time updates throughout the day, you can access live tracking by logging into our website at <a href="https://www.sheshalogistics.com">www.sheshalogistics.com</a>.</p>
+      <p>Wishing you a pleasant day.</p>
+      <p>The Shesha Team</p>
     `,
     attachments: [
       {
