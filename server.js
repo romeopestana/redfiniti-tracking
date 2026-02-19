@@ -183,7 +183,7 @@ app.post("/api/login", async (req, res) => {
     const sheets = await getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: "USRPWD!A1:M5000", // Columns A-M to include email addresses (D-M)
+      range: "USRPWD!A1:W5000", // Columns A-W to include email addresses (D-W, 20 emails)
     });
 
     const rows = response.data.values || [];
@@ -191,7 +191,7 @@ app.post("/api/login", async (req, res) => {
       return res.status(404).json({ error: "No user data in USRPWD tab" });
     }
 
-    // Assume row 1 is header (Client, USERNAME, PWD, then email columns D-M); data starts from row 2
+    // Assume row 1 is header (Client, USERNAME, PWD, then email columns D-W); data starts from row 2
     const dataRows = rows.slice(1);
     const match = dataRows.find((row) => {
       const rowClient = (row[0] || "").trim();
@@ -209,9 +209,9 @@ app.post("/api/login", async (req, res) => {
       return res.status(500).json({ error: "Client tab not configured for this user" });
     }
 
-    // Get authorized email addresses from columns D-M (indices 3-12)
+    // Get authorized email addresses from columns D-W (indices 3-22, 20 emails)
     const authorizedEmails = [];
-    for (let colIdx = 3; colIdx <= 12; colIdx++) {
+    for (let colIdx = 3; colIdx <= 22; colIdx++) {
       const email = (match[colIdx] || "").trim();
       if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         authorizedEmails.push(email);
@@ -238,7 +238,7 @@ app.get("/api/authorized-emails", async (req, res) => {
     const sheets = await getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: "USRPWD!A1:M5000",
+      range: "USRPWD!A1:W5000",
     });
 
     const rows = response.data.values || [];
@@ -256,9 +256,9 @@ app.get("/api/authorized-emails", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Get authorized email addresses from columns D-M (indices 3-12)
+    // Get authorized email addresses from columns D-W (indices 3-22, 20 emails)
     const authorizedEmails = [];
-    for (let colIdx = 3; colIdx <= 12; colIdx++) {
+    for (let colIdx = 3; colIdx <= 22; colIdx++) {
       const email = (match[colIdx] || "").trim();
       if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         authorizedEmails.push(email);

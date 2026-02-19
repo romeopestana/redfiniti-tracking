@@ -269,7 +269,7 @@ async function runDailyEmailJob() {
     console.log("Reading USRPWD tab...");
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: "USRPWD!A1:M5000",
+      range: "USRPWD!A1:W5000",
     });
     console.log(`✓ Read ${response.data.values?.length || 0} rows from USRPWD tab`);
 
@@ -296,9 +296,9 @@ async function runDailyEmailJob() {
         continue;
       }
 
-      // Collect email addresses from columns D-M (indices 3-12)
+      // Collect email addresses from columns D-W (indices 3-22, 20 emails)
       const emails = [];
-      for (let colIdx = 3; colIdx <= 12; colIdx++) {
+      for (let colIdx = 3; colIdx <= 22; colIdx++) {
         const email = (row[colIdx] || "").trim();
         if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           emails.push(email);
