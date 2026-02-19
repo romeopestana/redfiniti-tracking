@@ -14,7 +14,7 @@ This guide shows how to set up automated daily email reports on Render that run 
    | Field | Value |
    |-------|-------|
    **Name** | `daily-email-reports` |
-   **Schedule** | `30 6 * * *` (runs at 06:30 UTC daily = 08:30 Johannesburg time) |
+   **Schedule** | `30 6 * * 1-5` (runs at 06:30 UTC on weekdays only = 08:30 Johannesburg time, Monday-Friday) |
    **Build Command** | `npm install` |
    **Start Command** | `npm run cron-email` |
    **Instance Type** | **Starter** ($7/month) - required for email sending |
@@ -52,16 +52,17 @@ The Cron Job needs the same environment variables as your web service:
 
 ## Step 3: Verify Schedule
 
-**Schedule format:** `30 6 * * *`
+**Schedule format:** `30 6 * * 1-5`
 - `30` = minute (30th minute)
 - `6` = hour (6 AM UTC)
 - `*` = every day of month
 - `*` = every month
-- `*` = every day of week
+- `1-5` = Monday through Friday only (weekdays)
 
 **Time conversion:**
 - **06:30 UTC** = **08:30 SAST** (South African Standard Time, Johannesburg)
 - Johannesburg is UTC+2 year-round (no daylight saving)
+- **Runs Monday-Friday only** (no emails on weekends)
 
 ---
 
@@ -93,14 +94,16 @@ After the cron job runs, check the **Logs** tab in Render to see:
 
 ## How It Works
 
-1. **Every day at 08:30 Johannesburg time** (06:30 UTC), Render runs `npm run cron-email`
+1. **Every weekday (Monday-Friday) at 08:30 Johannesburg time** (06:30 UTC), Render runs `npm run cron-email`
 2. The script reads the **USRPWD** tab
 3. For each row (starting from row 2):
    - Gets **Client** tab name (column A)
-   - Collects email addresses from **columns D-M**
-   - Generates PDF of that Client tab
+   - Collects email addresses from **columns D-W** (up to 20 emails)
+   - Checks if Client tab has data from row 3 downwards
+   - If data exists, generates PDF of that Client tab
    - Emails PDF to all addresses in that row
 4. Logs results for monitoring
+5. **No emails sent on weekends** (Saturday and Sunday)
 
 ---
 
@@ -126,9 +129,9 @@ After the cron job runs, check the **Logs** tab in Render to see:
 
 | Schedule | Description |
 |----------|-------------|
-| `30 6 * * *` | Daily at 06:30 UTC (08:30 Johannesburg) |
-| `0 8 * * *` | Daily at 08:00 UTC (10:00 Johannesburg) |
-| `0 6 * * 1-5` | Weekdays only at 06:00 UTC (08:00 Johannesburg) |
+| `30 6 * * 1-5` | **Weekdays only** at 06:30 UTC (08:30 Johannesburg) - **RECOMMENDED** |
+| `30 6 * * *` | Daily at 06:30 UTC (08:30 Johannesburg) - includes weekends |
+| `0 8 * * 1-5` | Weekdays only at 08:00 UTC (10:00 Johannesburg) |
 
 ---
 

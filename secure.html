@@ -104,6 +104,18 @@
       .min-w-max {
         min-width: auto !important;
       }
+      #disclaimerText {
+        display: block !important;
+        page-break-inside: avoid;
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #ccc !important;
+      }
+      #disclaimerText p {
+        font-size: 9pt;
+        color: #666 !important;
+        font-style: italic;
+      }
     }
   </style>
 </head>
@@ -153,6 +165,11 @@
             <tbody id="secureTbody"></tbody>
           </table>
         </div>
+      </div>
+      <div id="disclaimerText" class="mt-4 pt-4 border-t border-slate-200 hidden">
+        <p class="text-xs text-slate-500 italic">
+          All Estimated Times of Arrival (ETAS) are estimates only and subject to change without notice. We are not liable for delays caused by carriers, ports, customs or other factors beyond our control.
+        </p>
       </div>
     </div>
   </main>
@@ -228,6 +245,12 @@
       const thead = document.getElementById("secureThead");
       const tbody = document.getElementById("secureTbody");
       const table = document.getElementById("secureTable");
+      const disclaimerEl = document.getElementById("disclaimerText");
+
+      // Hide disclaimer initially
+      if (disclaimerEl) {
+        disclaimerEl.classList.add("hidden");
+      }
 
       if (!sheet) {
         statusEl.textContent = "Missing sheet/tab name in URL.";
@@ -272,6 +295,11 @@
 
         table.classList.remove("hidden");
         statusEl.textContent = "";
+        
+        // Show disclaimer below the table
+        if (disclaimerEl) {
+          disclaimerEl.classList.remove("hidden");
+        }
       } catch (err) {
         console.error(err);
         statusEl.textContent = "Error contacting secure backend.";
