@@ -441,7 +441,6 @@ npm install
 npm start
 ```
 
-- **Run the cron job locally (for testing)**
 - **Run the cron jobs locally (for testing)**
 
 ```bash
