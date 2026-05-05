@@ -21,6 +21,20 @@ This guide shows how to set up automated daily email reports on Render that run 
 
 5. **Click "Create Cron Job"**
 
+### Optional: Second daily run for TNL at 16:00 Johannesburg
+
+Create a second cron job with these settings:
+
+| Field | Value |
+|-------|-------|
+**Name** | `daily-email-reports-tnl-16h00` |
+**Schedule** | `0 14 * * *` (runs daily at 14:00 UTC = 16:00 Johannesburg time) |
+**Build Command** | `npm install` |
+**Start Command** | `npm run cron-email-tnl` |
+**Instance Type** | **Starter** |
+
+This run only processes the customer tab `TNL`.
+
 ---
 
 ## Step 2: Set Environment Variables
@@ -73,6 +87,12 @@ Before deploying to Render, test the cron job locally:
 ```bash
 cd C:\Users\romeo\my-first-app
 npm run cron-email
+```
+
+To test the customer-specific run:
+
+```bash
+npm run cron-email-tnl
 ```
 
 This will:

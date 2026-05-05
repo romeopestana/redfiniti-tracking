@@ -13,8 +13,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configuration
-const SHEET_ID = "10y_pzCwdu-iqdylknQKFvZvz1EP-bHBIqAGBB4660kY";
+const SHEET_ID = process.env.SHEET_ID || "10y_pzCwdu-iqdylknQKFvZvz1EP-bHBIqAGBB4660kY";
 const KEYFILE = path.join(__dirname, "service-account-key.json");
+const EMAIL_MODE = (process.env.EMAIL_MODE || "live").trim().toLowerCase();
+const CRON_CLIENTS = (process.env.CRON_CLIENTS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const SAFE_EMAIL_RECIPIENTS = (process.env.SAFE_EMAIL_RECIPIENTS || "")
+  .split(",")
+  .map((value) => value.trim().toLowerCase())
+  .filter(Boolean);
+
+function applySafeEmailMode(emails) {
+  if (EMAIL_MODE !== "safe") return emails;
+  if (SAFE_EMAIL_RECIPIENTS.length === 0) {
+    console.warn(
+      "EMAIL_MODE is 'safe' but SAFE_EMAIL_RECIPIENTS is empty; row will be skipped."
+    );
+    return [];
+  }
+  return emails.filter((email) => SAFE_EMAIL_RECIPIENTS.includes(email.toLowerCase()));
+}
 
 // Validate configuration
 console.log("=== Cron Job Startup ===");
@@ -71,6 +91,9 @@ console.log("Email config:", {
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ? "SET" : "NOT SET",
   SMTP_USER: process.env.SMTP_USER ? "SET" : "NOT SET",
   SMTP_PASS: process.env.SMTP_PASS ? "SET" : "NOT SET",
+  EMAIL_MODE,
+  CRON_CLIENTS: CRON_CLIENTS.length ? CRON_CLIENTS.join(", ") : "ALL",
+  SAFE_EMAIL_RECIPIENTS_COUNT: SAFE_EMAIL_RECIPIENTS.length,
 });
 
 if (!useSendGrid && !hasSMTP) {
@@ -296,6 +319,11 @@ async function runDailyEmailJob() {
         continue;
       }
 
+      if (CRON_CLIENTS.length > 0 && !CRON_CLIENTS.includes(clientTab)) {
+        console.log(`Row ${rowNum} (${clientTab}): Skipping - not in CRON_CLIENTS filter`);
+        continue;
+      }
+
       // Collect email addresses from columns D-W (indices 3-22, 20 emails)
       const emails = [];
       for (let colIdx = 3; colIdx <= 22; colIdx++) {
@@ -305,13 +333,20 @@ async function runDailyEmailJob() {
         }
       }
 
-      if (emails.length === 0) {
-        console.log(`Row ${rowNum} (${clientTab}): Skipping - no email addresses`);
+      const safeEmails = applySafeEmailMode(emails);
+      if (safeEmails.length === 0) {
+        if (EMAIL_MODE === "safe") {
+          console.log(
+            `Row ${rowNum} (${clientTab}): Skipping - no recipients allowed by SAFE_EMAIL_RECIPIENTS`
+          );
+        } else {
+          console.log(`Row ${rowNum} (${clientTab}): Skipping - no email addresses`);
+        }
         continue;
       }
 
       try {
-        console.log(`Row ${rowNum} (${clientTab}): Processing ${emails.length} email(s)...`);
+        console.log(`Row ${rowNum} (${clientTab}): Processing ${safeEmails.length} email(s)...`);
         
         // Get tab ID
         const tabId = await getTabId(sheets, clientTab);
@@ -341,8 +376,8 @@ async function runDailyEmailJob() {
         console.log(`Row ${rowNum} (${clientTab}): PDF downloaded (${pdfBuffer.length} bytes)`);
         
         // Send email
-        const emailResult = await sendEmail(transporter, emails, clientTab, pdfBuffer);
-        console.log(`Row ${rowNum} (${clientTab}): Email sent successfully to ${emails.join(", ")}`);
+        const emailResult = await sendEmail(transporter, safeEmails, clientTab, pdfBuffer);
+        console.log(`Row ${rowNum} (${clientTab}): Email sent successfully to ${safeEmails.join(", ")}`);
         successCount++;
 
         // Delay between rows to reduce Google rate limiting (5 seconds)

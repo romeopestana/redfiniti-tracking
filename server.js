@@ -33,7 +33,23 @@ app.get("/", (req, res) => {
 });
 
 // === CONFIGURE THESE VALUES ===
-const SHEET_ID = "10y_pzCwdu-iqdylknQKFvZvz1EP-bHBIqAGBB4660kY";
+const SHEET_ID = process.env.SHEET_ID || "10y_pzCwdu-iqdylknQKFvZvz1EP-bHBIqAGBB4660kY";
+const EMAIL_MODE = (process.env.EMAIL_MODE || "live").trim().toLowerCase();
+const SAFE_EMAIL_RECIPIENTS = (process.env.SAFE_EMAIL_RECIPIENTS || "")
+  .split(",")
+  .map((value) => value.trim().toLowerCase())
+  .filter(Boolean);
+
+function enforceSafeEmailMode(email) {
+  if (EMAIL_MODE !== "safe") return null;
+  if (SAFE_EMAIL_RECIPIENTS.length === 0) {
+    return "EMAIL_MODE is 'safe' but SAFE_EMAIL_RECIPIENTS is empty";
+  }
+  if (!SAFE_EMAIL_RECIPIENTS.includes(email)) {
+    return `EMAIL_MODE is 'safe'; ${email} is not in SAFE_EMAIL_RECIPIENTS`;
+  }
+  return null;
+}
 
 async function getSheetsClient() {
   const auth = new google.auth.GoogleAuth({
@@ -344,6 +360,14 @@ app.post("/api/email-pdf", async (req, res) => {
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: "Invalid email address format" });
+  }
+
+  const safeModeError = enforceSafeEmailMode(email);
+  if (safeModeError) {
+    return res.status(403).json({
+      error: "Email blocked by safe mode",
+      details: safeModeError,
+    });
   }
 
   // Check if using SendGrid (preferred for Render) or SMTP
@@ -674,6 +698,8 @@ app.listen(PORT, () => {
     SMTP_USER: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}***@${process.env.SMTP_USER.split("@")[1] || "unknown"}` : "NOT SET",
     SMTP_PASS: process.env.SMTP_PASS ? `SET (length: ${process.env.SMTP_PASS.length})` : "NOT SET",
     FROM_EMAIL: process.env.FROM_EMAIL || "not set (will use SMTP_USER)",
+    EMAIL_MODE,
+    SAFE_EMAIL_RECIPIENTS_COUNT: SAFE_EMAIL_RECIPIENTS.length,
   });
 });
 
